@@ -1,8 +1,8 @@
-matplotlib
-numpy
-pandas
-pyts
-scikit_learn
-scipy
-streamlit
-tensorflow
+matplotlib==3.8.4
+numpy==1.25.0
+pandas==2.2.2
+pyts==0.13.0
+scikit_learn==1.5.1
+scipy==1.14.0
+streamlit==1.36.0
+tensorflow==2.17.0
