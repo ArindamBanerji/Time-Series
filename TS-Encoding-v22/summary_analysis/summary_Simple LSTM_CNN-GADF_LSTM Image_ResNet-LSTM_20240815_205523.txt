@@ -1,0 +1,22 @@
+Summary Analysis:
+
+• Best performing model: Simple LSTM
+• Worst performing model: LSTM Image
+• Performance difference (MSE): 1320.0459
+
+• Model rankings based on MSE:
+  1. Simple LSTM: 48.6792
+  2. ResNet-LSTM: 77.4898
+  3. CNN-GADF: 545.5677
+  4. LSTM Image: 1368.7251
+
+• Key observations:
+  - The Simple LSTM model outperforms other models, suggesting it may be the most suitable for this particular stock and time period.
+  - There's a significant performance gap between the best and worst models (1320.0459 MSE difference).
+
+• Potential improvements and next steps:
+  1. Fine-tune hyperparameters, especially for the underperforming models.
+  2. Experiment with different sequence lengths to capture optimal time dependencies.
+  3. Incorporate additional features such as trading volume or technical indicators.
+  4. Test the models on different stocks and time periods to assess their generalization capabilities.
+  5. Consider ensemble methods to combine predictions from multiple models.

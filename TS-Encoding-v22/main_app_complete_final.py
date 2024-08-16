@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
+import os
+from datetime import datetime
 from data_preparation_updated_v3 import get_stock_data, prepare_time_series_data, prepare_image_data, prepare_resnet_data, inverse_transform
 from train_predict_updated_v3 import (
     train_simple_lstm, predict_simple_lstm,
@@ -14,7 +16,15 @@ from evaluation_complete_v3 import evaluate_predictions
 
 logging.basicConfig(level=logging.INFO)
 
-def plot_predictions(y_true: np.ndarray, predictions: dict, title: str):
+def create_directory(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+def generate_unique_filename(base_name, approach_name):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"{base_name}_{approach_name}_{timestamp}"
+
+def plot_predictions(y_true: np.ndarray, predictions: dict, title: str, save_path: str):
     plt.figure(figsize=(12, 6))
     plt.plot(y_true, label='Actual Prices', color='black')
     colors = ['red', 'blue', 'green', 'purple']
@@ -24,7 +34,54 @@ def plot_predictions(y_true: np.ndarray, predictions: dict, title: str):
     plt.xlabel('Time')
     plt.ylabel('Stock Price')
     plt.legend()
-    return plt
+    plt.savefig(save_path)
+    st.pyplot(plt)
+    plt.close()
+
+def plot_individual_prediction(y_true: np.ndarray, y_pred: np.ndarray, model_name: str, title: str, save_path: str):
+    plt.figure(figsize=(12, 6))
+    plt.plot(y_true, label='Actual Prices', color='black')
+    plt.plot(y_pred, label=f'{model_name} Predictions', color='red', alpha=0.7)
+    plt.title(title)
+    plt.xlabel('Time')
+    plt.ylabel('Stock Price')
+    plt.legend()
+    plt.savefig(save_path)
+    st.pyplot(plt)
+    plt.close()
+
+def save_metrics(metrics: dict, save_path: str):
+    df = pd.DataFrame(metrics).T
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'Model'}, inplace=True)
+    df.to_csv(save_path, index=False)
+
+def create_summary_analysis(metrics: dict, save_path: str):
+    with open(save_path, 'w') as f:
+        f.write("Summary Analysis:\n\n")
+        best_model = min(metrics, key=lambda x: metrics[x]['MSE'])
+        worst_model = max(metrics, key=lambda x: metrics[x]['MSE'])
+        f.write(f"• Best performing model: {best_model}\n")
+        f.write(f"• Worst performing model: {worst_model}\n")
+        f.write(f"• Performance difference (MSE): {metrics[worst_model]['MSE'] - metrics[best_model]['MSE']:.4f}\n")
+        f.write("\n• Model rankings based on MSE:\n")
+        for i, (model, model_metrics) in enumerate(sorted(metrics.items(), key=lambda x: x[1]['MSE']), 1):
+            f.write(f"  {i}. {model}: {model_metrics['MSE']:.4f}\n")
+        f.write("\n• Key observations:\n")
+        f.write(f"  - The {best_model} model outperforms other models, suggesting it may be the most suitable for this particular stock and time period.\n")
+        f.write(f"  - There's a significant performance gap between the best and worst models ({metrics[worst_model]['MSE'] - metrics[best_model]['MSE']:.4f} MSE difference).\n")
+        
+        # Check for any unexpected patterns
+        if worst_model in ['Simple LSTM', 'ResNet-LSTM'] or best_model in ['CNN-GADF', 'LSTM Image']:
+            f.write("  - Unexpectedly, a simpler model outperformed more complex ones. This might indicate overfitting in the complex models or that the stock's behavior is relatively simple to predict.\n")
+        
+        # Suggest improvements
+        f.write("\n• Potential improvements and next steps:\n")
+        f.write("  1. Fine-tune hyperparameters, especially for the underperforming models.\n")
+        f.write("  2. Experiment with different sequence lengths to capture optimal time dependencies.\n")
+        f.write("  3. Incorporate additional features such as trading volume or technical indicators.\n")
+        f.write("  4. Test the models on different stocks and time periods to assess their generalization capabilities.\n")
+        f.write("  5. Consider ensemble methods to combine predictions from multiple models.\n")
 
 def train_model_with_progress(train_func, x_train, y_train, model_name, epochs=100, batch_size=32):
     progress_bar = st.progress(0)
@@ -50,16 +107,10 @@ def load_data(ticker, period):
     return get_stock_data(ticker, period)
 
 def create_metrics_table(metrics):
-    # Create a DataFrame from the metrics dictionary
     df = pd.DataFrame(metrics).T
-    
-    # Round all numeric values to 4 decimal places
     df = df.round(4)
-    
-    # Move the index (model names) to a column
     df.reset_index(inplace=True)
     df.rename(columns={'index': 'Model'}, inplace=True)
-    
     return df
 
 def main():
@@ -84,6 +135,11 @@ def main():
                 
                 predictions = {}
                 metrics = {}
+                
+                # Create directories
+                create_directory("plots")
+                create_directory("metrics")
+                create_directory("summary_analysis")
                 
                 for model_name in models_to_run:
                     st.write(f"Training {model_name} model...")
@@ -123,9 +179,24 @@ def main():
                         for metric, value in model_metrics.items():
                             st.write(f"  {metric}: {value:.4f}")
                 
+                # Save metrics
+                metrics_filename = generate_unique_filename("metrics", "_".join(models_to_run))
+                save_metrics(metrics, f"metrics/{metrics_filename}.csv")
+                
+                # Create and save summary analysis
+                summary_filename = generate_unique_filename("summary", "_".join(models_to_run))
+                create_summary_analysis(metrics, f"summary_analysis/{summary_filename}.txt")
+                
                 st.subheader("Stock Price Predictions")
-                fig = plot_predictions(y_test_inv, predictions, f"{ticker} Stock Price Predictions")
-                st.pyplot(fig)
+                
+                # Composite plot
+                composite_filename = generate_unique_filename("composite_plot", "_".join(models_to_run))
+                plot_predictions(y_test_inv, predictions, f"{ticker} Stock Price Predictions", f"plots/{composite_filename}.png")
+                
+                # Individual plots
+                for model_name, pred in predictions.items():
+                    individual_filename = generate_unique_filename("individual_plot", model_name)
+                    plot_individual_prediction(y_test_inv, pred, model_name, f"{ticker} Stock Price Prediction - {model_name}", f"plots/{individual_filename}.png")
                 
             except Exception as e:
                 logging.error(f"An error occurred during processing: {str(e)}", exc_info=True)

@@ -23,7 +23,10 @@ def train_model(model, x_train: np.ndarray, y_train: np.ndarray, epochs: int = 1
             
             optimizer.zero_grad()
             outputs = model(batch_x)
-            loss = criterion(outputs.squeeze(), batch_y)
+            # Ensure outputs and batch_y have the same shape
+            outputs = outputs.view(-1)
+            batch_y = batch_y.view(-1)
+            loss = criterion(outputs, batch_y)
             loss.backward()
             optimizer.step()
             
