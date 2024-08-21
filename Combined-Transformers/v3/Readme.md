@@ -30,6 +30,8 @@ The project consists of five main Python files:
 4. `vision_transformer_ts_forecasting_v32.py`: Implementation of the Vision Transformer model.
 5. `simple_lstm_ts_forecasting.py`: Implementation of the Simple LSTM model.
 
+Please call this experiment using the Google colab scaffolding within this directory.
+
 ## Models
 
 ### Transformer
