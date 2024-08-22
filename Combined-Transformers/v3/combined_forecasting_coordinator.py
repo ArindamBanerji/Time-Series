@@ -49,15 +49,16 @@ def plot_results(y_true, y_pred_dict, title, filename, ticker):
         plt.ylim(min_y, max_y)
         plt.tight_layout()
         
-        # Display the plot on screen
-        plt.show()
-        
         if not os.path.exists('plots'):
             os.makedirs('plots')
         
         model_filename = f"{filename}_{model_name.lower().replace(' ', '_')}.png"
         plt.savefig(os.path.join('plots', model_filename))
         print(f"Plot saved as 'plots/{model_filename}'")
+        
+        # Display the plot on screen
+        plt.show()
+        
         plt.close()
 
 def create_and_save_plots(y_true, y_pred_dict, ticker, version_num):
